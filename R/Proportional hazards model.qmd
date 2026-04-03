@@ -1,0 +1,205 @@
+---
+title: "Proportional hazards model"
+format: html
+editor: visual
+---
+
+## ================================================================
+
+## Survival Analysis
+
+## Proportional hazards model
+
+## ================================================================
+
+```{r}
+load("Ahda_RLab3.RData")
+library(survival)
+```
+
+## A data set on patients with multiple myeloma -------------------------------
+
+## ----------------------------------------------------------------------------
+
+```{r}
+str(multmyel)
+head(multmyel)
+summary(multmyel)
+Hmisc::hist.data.frame(multmyel, nclass = 10)
+```
+
+## The Surv object
+
+## ---------------
+
+```{r}
+myesurv <- with(multmyel, Surv(time, status))
+```
+
+## Two survival plots (drawn with function survplot\[rms\])
+
+## ------------------------------------------------------
+
+```{r}
+library(rms)
+#quartz(width = 16)             # Under Mac: quartz(); under Linux: x11()
+par(mfrow = c(1, 2), font = 2, font.lab = 4, font.axis = 2, las = 1,
+    oma = c(0, 0, 1, 0), mar = c(5, 5, 4, 2))
+survplot(npsurv(myesurv ~ sex, multmyel), xlab = "Months", col = 1:2,
+         lwd = 3, ylab = expression(bolditalic(hat(S)(t))), time.inc = 5)
+title("Survival functions according to sex")
+survplot(npsurv(myesurv ~ BJP, multmyel), xlab = "Months", col = 1:2,
+         lwd = 3, ylab = expression(bolditalic(hat(S)(t))),
+         label.curves = FALSE, time.inc = 5, n.risk = TRUE)
+title("Survival functions according to Bence-Jones protein")
+legend("top", c("BJP: Yes", "BJP: No"), col = 1:2, lwd = 3, bty = "n")
+```
+
+## Fit of Cox models----- -----------------------------------------------------
+
+additative - needed for linearity in log!
+
+BJP = protein (biomarker) \## ----------------------------------------------------------------------------
+
+```{r}
+cox1 <- coxph(myesurv ~ sex + BJP, multmyel)
+summary(cox1)
+```
+
+HR = 0.9432 = e\^-0.05852 = e\^beta 6% lower instentaneous risk (hazard) for male (same proteins) but CI includes 1 negative beta (coefficient) is to be interpreted differently from parametric survival function (where pos coef lowers risk)
+
+baseline of hazard (intercept) is not shown and not necesaary for HR
+
+## Including the interaction between both variables
+
+## ------------------------------------------------
+
+```{r}
+cox1 <- update(cox1, ~ . + sex:BJP)
+ summary(cox1)
+```
+
+## Exercise:
+
+## Compute the model-based hazard ratios associated with the absence of the
+
+## BJ protein.
+
+female: HR = 1.5980
+
+male: HR = e\^(0.4688+0.1131) !!!!
+
+```{r}
+exp(0.4688+0.1131)
+```
+
+## ------------------------------------------------------------------------
+
+## The Cox model with BUN, HB, age, sex, and BJP and remove interaction
+
+## ---------------------------------------------
+
+```{r}
+cox2 <- update(cox1, ~ . + BUN + HB + age - sex:BJP, multmyel)
+print(summary(cox2), signif.stars = FALSE)
+```
+
+see the tests: null-hypothesis: null model is the same, covariates are not related to survival
+
+## Exercise:
+
+## Which is the hazard ratio associated with an increase of 10 units in BUN?+
+
+coef of BUN is low because range of BUN is high -\> 1 unit does not change a lot
+
+```{r}
+exp(10*0.020706)
+```
+
+## -------------------------------------------------------------------------
+
+## Model-based prediction -----------------------------------------------------
+
+## ----------------------------------------------------------------------------
+
+## Estimation of the baseline hazard function
+
+## ------------------------------------------
+
+```{r}
+coxph.detail(cox2)
+coxph.detail(cox2)$hazard
+```
+
+## (Predicted) survival function of an "average" patient
+
+```{r}
+cox2$mean
+survfit(cox2)
+#windows(width = 8)
+par(font = 2, font.lab = 4, font.axis = 2, las = 1, mar = c(5, 5, 2, 2))
+plot(survfit(cox2), lwd = 3, col = 4, xlab = "Months", ylab = expression(bolditalic(hat(S)(t))))
+```
+
+## Patient profiles for prediction
+
+## -------------------------------
+
+```{r}
+#create dataframe of 5 columns (each variable)
+(newdat <- data.frame(BUN = 25, sex = factor(rep(c("Female", "Male"), 2)), HB = 10, age = 65, BJP = factor(rep(c("No", "Yes"), each = 2))))
+```
+
+```{r}
+survfit(cox2, newdata = newdat)
+summary(survfit(cox2, newdata = newdat))
+```
+
+## Graphical respresentation
+
+## -------------------------
+
+```{r}
+#windows(width = 8)
+par(font = 2, font.lab = 4, font.axis = 2, las = 1)
+plot(survfit(cox2, newdata = newdat), col = 1:4, lwd = 3, xlab = "Time [Months]",
+     bty = "n", xlim = c(0, 100))
+legend("bottomleft", c("Woman without BJP", "Man without BJP",
+                       "Woman with BJP", "Man with BJP"),
+       col = 1:4, lwd = 2, bty = "n")
+title("Model-based prediction of survival function (BUN = 25; HB = 10; Age = 65)")
+```
+
+use AFT model to predict a survival probability/time (parametric)
+
+## Residuals and goodness-of-fit of the Cox model -----------------------------
+
+## ----------------------------------------------------------------------------
+
+```{r}
+residuals(cox2)
+```
+
+## The Schoenfeld residuals:
+
+## Can we assume that the assumption of proportional hazards holds?
+
+## ----------------------------------------------------------------
+
+```{r}
+residuals(cox2, "schoenfeld") ## (i) Use of function cox.zph cox.zph(cox2)
+```
+
+-   schoenfeld residuals only exists with censored events
+-   prportion holds for spec covariate = no correlation between survival time and residuals of a specific covariate
+
+## (ii) Use of function plot.cox.zph
+
+```{r}
+#windows(width = 12, height = 7)
+par(mfrow = c(2, 3), font = 2, font.lab = 4, font.axis = 2, las = 1, cex.lab = 1.3, cex.axis = 1.2)
+plot(cox.zph(cox2), lwd = 2)
+```
+
+-   parameter should be constant over time or draw a horizontal line within CI
+-   assumption holds
