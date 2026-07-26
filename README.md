@@ -21,7 +21,9 @@ is defensible.
 
 ## Dataset
 
-`multmyel` — survival times of patients with multiple myeloma.
+`multmyel` — survival times of 48 patients with multiple myeloma, supplied as
+part of the course. **The data file is not included in this repository** (see
+Data availability below).
 
 - 48 patients, 36 deaths (12 censored)
 - Survival time measured in months from diagnosis
@@ -113,8 +115,22 @@ diagnostics are included here for that reason.
 ```
 R/       Proportional hazards model.qmd   Analysis source
 results/ Proportional hazards model.pdf   Rendered output
-data/    Ahda_RLab3.RData                 Dataset
 ```
+
+## Data availability
+
+The dataset was provided as teaching material for the Advanced Health Data
+Analysis course and is not redistributed here, as I do not hold the rights to
+publish it.
+
+This means the analysis cannot be re-run from this repository alone. The
+rendered PDF in `results/` contains the full output, and the `.qmd` documents
+every modelling step, so the work is fully inspectable even though it is not
+directly reproducible.
+
+To reproduce it you would need the `multmyel` data frame: 48 patients with
+`time`, `status`, `age`, `sex`, `BUN`, `CA`, `HB`, `PC` and `BJP` as described
+above, loaded as `multmyel` before running the `.qmd`.
 
 ---
 
